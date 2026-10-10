@@ -1,5 +1,9 @@
 Tutorial and example repository for setting up a GitHub-hosted Kodi repo. For an example of a repo created using this method (including submodules), see https://www.github.com/jurialmunkey/repository.jurialmunkey/.
 
+## Install this repository
+
+Download and install [repository.thokodi-1.0.1.zip](repo/zips/repository.thokodi/repository.thokodi-1.0.1.zip) in Kodi using **Add-ons → Install from zip file**. The repository add-on points to the generated index on the `master` branch. The ZIP linked on the [home page](index.html) is a separate Kodi userdata backup, not an add-on.
+
 # BASIC - How to setup for hosting on GitHub Pages
 
 In order to follow this tutorial, first [use this repository as a template](https://github.com/drinfernoo/repository.example/generate) for a new repository, and then clone your newly created repository locally. For the simplest file manager source URL, it is recommended to name your newly created repository as `YOUR_USERNAME_HERE.github.io`.
