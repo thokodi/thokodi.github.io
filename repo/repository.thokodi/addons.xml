@@ -23,16 +23,21 @@
   </extension>
 </addon>
 
-<addon id="plugin.video.thokodi" name="thokodi" version="1.0.1" provider-name="thokodi">
+<addon id="plugin.video.thokodi"
+       name="Thokodi"
+       version="1.1.0"
+       provider-name="thokodi">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
   </requires>
+
   <extension point="xbmc.python.pluginsource" library="default.py">
-        <provides>executable</provides>
+    <provides>executable</provides>
   </extension>
+
   <extension point="xbmc.addon.metadata">
-    <summary lang="en">thokodi</summary>
-    <description lang="en">thokodi</description>
+    <summary lang="en_GB">Thokodi build installer</summary>
+    <description lang="en_GB">A manifest-driven Kodi build installer.</description>
     <platform>all</platform>
     <assets>
       <icon>icon.png</icon>
