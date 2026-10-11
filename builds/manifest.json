@@ -1,12 +1,3 @@
 {
-  "builds": [
-    {
-      "name": "Thokodi Sample Build",
-      "description": "Example build entry for Kodi. Replace with your real package URL.",
-      "url": "https://raw.githubusercontent.com/thokodi/thokodi.github.io/master/repo/repository.thokodi/plugin.video.thokodi/plugin.video.thokodi-1.0.1.zip",
-      "checksum": "",
-      "icon": "https://raw.githubusercontent.com/thokodi/thokodi.github.io/master/repo/repository.thokodi/plugin.video.thokodi/icon.png",
-      "fanart": "https://raw.githubusercontent.com/thokodi/thokodi.github.io/master/repo/repository.thokodi/plugin.video.thokodi/fanart.jpg"
-    }
-  ]
+  "builds": []
 }
