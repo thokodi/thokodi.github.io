@@ -20,7 +20,7 @@ ADDON_NAME = ADDON.getAddonInfo("name")
 ADDON_VERSION = ADDON.getAddonInfo("version")
 HANDLE = int(sys.argv[1]) if len(sys.argv) > 1 else 1
 
-MANIFEST_URL = "https://thokodi.github.io/builds/manifest.json"
+MANIFEST_URL = "https://raw.githubusercontent.com/thokodi/thokodi.github.io/master/builds/manifest.json"
 
 
 def log(message: str, level=xbmc.LOGINFO) -> None:
