@@ -1,3 +1,11 @@
 {
-  "builds": []
+  "builds": [
+    {
+      "name": "thokodi",
+      "version": "1.0.0",
+      "url": "https://f000.backblazeb2.com/b2api/v1/b2_download_file_by_id?fileId=YOUR_FILE_ID",
+      "icon": "",
+      "fanart": ""
+    }
+  ]
 }
