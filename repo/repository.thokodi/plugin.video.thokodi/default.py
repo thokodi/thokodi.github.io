@@ -119,7 +119,7 @@ def render_build_list() -> None:
 
 def verify_checksum(local_path: Path, expected: str) -> bool:
     if not expected:
-        return True
+        raise ValueError("A checksum is required")
 
     if ":" in expected:
         algo, expected_hash = expected.split(":", 1)
@@ -149,7 +149,9 @@ def safe_extract_zip(zip_path: Path, destination: Path) -> None:
     with zipfile.ZipFile(zip_path, "r") as archive:
         for member in archive.infolist():
             target = (destination / member.filename).resolve()
-            if not str(target).startswith(str(destination)):
+            try:
+                target.relative_to(destination)
+            except ValueError:
                 raise ValueError(f"Blocked unsafe zip entry: {member.filename}")
         archive.extractall(destination)
 
@@ -157,6 +159,11 @@ def safe_extract_zip(zip_path: Path, destination: Path) -> None:
 def install_build(url: str, checksum: str, name: str) -> None:
     if not url:
         xbmcgui.Dialog().ok(ADDON_NAME, "Missing build URL.")
+        xbmcplugin.endOfDirectory(HANDLE, succeeded=False)
+        return
+
+    if not checksum:
+        xbmcgui.Dialog().ok(ADDON_NAME, "A build checksum is required.")
         xbmcplugin.endOfDirectory(HANDLE, succeeded=False)
         return
 
