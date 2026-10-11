@@ -20,16 +20,11 @@ ADDON_NAME = ADDON.getAddonInfo("name")
 ADDON_VERSION = ADDON.getAddonInfo("version")
 HANDLE = int(sys.argv[1]) if len(sys.argv) > 1 else 1
 
-# TODO: replace this with your real manifest endpoint
 MANIFEST_URL = "https://thokodi.github.io/builds/manifest.json"
 
 
 def log(message: str, level=xbmc.LOGINFO) -> None:
     xbmc.log(f"[{ADDON_ID}] {message}", level)
-
-
-def notify(title: str, message: str, level=xbmcgui.NOTIFICATION_INFO) -> None:
-    xbmcgui.Dialog().notification(title, message, level, 5000)
 
 
 def build_url(**query) -> str:
@@ -51,19 +46,16 @@ def open_url(url: str) -> str:
 
 
 def add_item(label: str, action: str, folder: bool = True, art: dict | None = None, info: dict | None = None, **params) -> None:
-    li = xbmcgui.ListItem(label=label)
-
+    item = xbmcgui.ListItem(label=label)
     if art:
-        li.setArt(art)
-
+        item.setArt(art)
     if info:
-        vtag = li.getVideoInfoTag()
+        video_info = item.getVideoInfoTag()
         if info.get("title"):
-            vtag.setTitle(info["title"])
+            video_info.setTitle(info["title"])
         if info.get("plot"):
-            vtag.setPlot(info["plot"])
-
-    xbmcplugin.addDirectoryItem(HANDLE, build_url(action=action, **params), li, isFolder=folder)
+            video_info.setPlot(info["plot"])
+    xbmcplugin.addDirectoryItem(HANDLE, build_url(action=action, **params), item, isFolder=folder)
 
 
 def render_main_menu() -> None:
@@ -126,11 +118,6 @@ def render_build_list() -> None:
 
 
 def verify_checksum(local_path: Path, expected: str) -> bool:
-    """
-    Expected checksum format examples:
-      - sha256:abcdef...
-      - md5:abcdef...
-    """
     if not expected:
         return True
 
@@ -147,23 +134,24 @@ def verify_checksum(local_path: Path, expected: str) -> bool:
 
     import hashlib
 
-    h = hashlib.new(algo)
-    with local_path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
-            h.update(chunk)
+    digest = hashlib.new(algo)
+    with local_path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
 
-    return h.hexdigest().lower() == expected_hash
+    return digest.hexdigest().lower() == expected_hash
 
 
 def safe_extract_zip(zip_path: Path, destination: Path) -> None:
     import zipfile
 
-    with zipfile.ZipFile(zip_path, "r") as zf:
-        for member in zf.infolist():
-            member_path = (destination / member.filename).resolve()
-            if not str(member_path).startswith(str(destination.resolve())):
+    destination = destination.resolve()
+    with zipfile.ZipFile(zip_path, "r") as archive:
+        for member in archive.infolist():
+            target = (destination / member.filename).resolve()
+            if not str(target).startswith(str(destination)):
                 raise ValueError(f"Blocked unsafe zip entry: {member.filename}")
-        zf.extractall(destination)
+        archive.extractall(destination)
 
 
 def install_build(url: str, checksum: str, name: str) -> None:
@@ -172,17 +160,17 @@ def install_build(url: str, checksum: str, name: str) -> None:
         xbmcplugin.endOfDirectory(HANDLE, succeeded=False)
         return
 
-    dialog = xbmcgui.DialogProgress()
-    dialog.create(ADDON_NAME, f"Downloading {name}...")
+    progress = xbmcgui.DialogProgress()
+    progress.create(ADDON_NAME, f"Downloading {name}...")
 
-    temp_dir = Path(tempfile.mkdtemp(prefix="thokodi_"))
-    zip_path = temp_dir / "build.zip"
+    tmp_dir = Path(tempfile.mkdtemp(prefix="thokodi_"))
+    zip_path = tmp_dir / "build.zip"
 
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Kodi"})
         with urllib.request.urlopen(req, timeout=60) as response, zip_path.open("wb") as out:
             total = response.headers.get("Content-Length")
-            total = int(total) if total and total.isdigit() else 0
+            total_size = int(total) if total and total.isdigit() else 0
             downloaded = 0
 
             while True:
@@ -192,23 +180,24 @@ def install_build(url: str, checksum: str, name: str) -> None:
                 out.write(chunk)
                 downloaded += len(chunk)
 
-                percent = int((downloaded / total) * 100) if total else 0
-                dialog.update(percent, f"Downloading {name}...", f"{downloaded} bytes")
+                if total_size:
+                    percent = min(int((downloaded / total_size) * 100), 100)
+                    progress.update(percent, f"Downloading {name}...", f"{downloaded} bytes")
+                else:
+                    progress.update(0, f"Downloading {name}...", f"{downloaded} bytes")
 
-                if dialog.iscanceled():
+                if progress.iscanceled():
                     raise Exception("Download canceled")
 
         if checksum and not verify_checksum(zip_path, checksum):
             raise ValueError("Checksum verification failed")
 
-        dialog.update(0, f"Installing {name}...")
+        progress.update(0, f"Installing {name}...")
 
-        # Install into a controlled location, not blindly over special://home.
-        # If you need a different target, adjust this path intentionally.
         install_target = Path(xbmcvfs.translatePath("special://home/addons"))
         safe_extract_zip(zip_path, install_target)
 
-        dialog.close()
+        progress.close()
         xbmcgui.Dialog().ok(
             ADDON_NAME,
             f"{name} downloaded and installed.",
@@ -216,7 +205,7 @@ def install_build(url: str, checksum: str, name: str) -> None:
         )
         xbmc.executebuiltin("Container.Refresh")
     except Exception as exc:
-        dialog.close()
+        progress.close()
         log(f"Install failed: {exc}", xbmc.LOGERROR)
         xbmcgui.Dialog().ok(ADDON_NAME, "Installation failed.", str(exc))
         xbmcplugin.endOfDirectory(HANDLE, succeeded=False)
@@ -226,7 +215,7 @@ def install_build(url: str, checksum: str, name: str) -> None:
         except Exception:
             pass
         try:
-            temp_dir.rmdir()
+            tmp_dir.rmdir()
         except Exception:
             pass
 
