@@ -180,11 +180,12 @@ def install_build(url: str, checksum: str, name: str) -> None:
                 out.write(chunk)
                 downloaded += len(chunk)
 
+                mb = downloaded / (1024 * 1024)
                 if total_size:
                     percent = min(int((downloaded / total_size) * 100), 100)
-                    progress.update(percent, f"Downloading {name}...", f"{downloaded} bytes")
+                    progress.update(percent, f"Downloading {name}... {mb:.1f} MB")
                 else:
-                    progress.update(0, f"Downloading {name}...", f"{downloaded} bytes")
+                    progress.update(0, f"Downloading {name}... {mb:.1f} MB")
 
                 if progress.iscanceled():
                     raise Exception("Download canceled")
