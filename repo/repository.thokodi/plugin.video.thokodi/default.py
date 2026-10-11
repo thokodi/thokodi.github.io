@@ -50,11 +50,14 @@ def add_item(label: str, action: str, folder: bool = True, art: dict | None = No
     if art:
         item.setArt(art)
     if info:
-        video_info = item.getVideoInfoTag()
-        if info.get("title"):
-            video_info.setTitle(info["title"])
-        if info.get("plot"):
-            video_info.setPlot(info["plot"])
+        if hasattr(item, "getVideoInfoTag"):
+            video_info = item.getVideoInfoTag()
+            if info.get("title"):
+                video_info.setTitle(info["title"])
+            if info.get("plot"):
+                video_info.setPlot(info["plot"])
+        else:
+            item.setInfo("video", {k: v for k, v in info.items() if v})
     xbmcplugin.addDirectoryItem(HANDLE, build_url(action=action, **params), item, isFolder=folder)
 
 
@@ -203,7 +206,8 @@ def install_build(url: str, checksum: str, name: str) -> None:
         xbmc.executebuiltin("Container.Refresh")
     except Exception as exc:
         progress.close()
-        log(f"Install failed: {exc}", xbmc.LOGERROR)
+        import traceback
+        log(f"Install failed: {exc}\n{traceback.format_exc()}", xbmc.LOGERROR)
         xbmcgui.Dialog().ok(ADDON_NAME, f"Installation failed.\n{exc}")
         xbmcplugin.endOfDirectory(HANDLE, succeeded=False)
     finally:
@@ -218,6 +222,16 @@ def install_build(url: str, checksum: str, name: str) -> None:
 
 
 def router() -> None:
+    try:
+        _route()
+    except Exception as exc:
+        import traceback
+        log(f"Unhandled error: {exc}\n{traceback.format_exc()}", xbmc.LOGERROR)
+        xbmcgui.Dialog().ok(ADDON_NAME, f"Unexpected error.\n{exc}")
+        xbmcplugin.endOfDirectory(HANDLE, succeeded=False)
+
+
+def _route() -> None:
     params = parse_params()
     action = params.get("action")
 
