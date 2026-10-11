@@ -1,11 +1,12 @@
 {
   "builds": [
     {
-      "name": "thokodi",
+      "name": "Thokodi",
       "version": "1.0.0",
-      "url": "https://f000.backblazeb2.com/b2api/v1/b2_download_file_by_id?fileId=YOUR_FILE_ID",
-      "icon": "",
-      "fanart": ""
+      "description": "Custom Kodi build hosted on Backblaze B2",
+      "url": "https://f003.backblazeb2.com/file/thokodi/thokodi-build.zip",
+      "icon": "https://thokodi.github.io/repo/repository.thokodi/icon.png",
+      "fanart": "https://thokodi.github.io/repo/repository.thokodi/fanart.jpg"
     }
   ]
 }
