@@ -83,7 +83,7 @@ def render_build_list() -> None:
         manifest = load_manifest()
     except Exception as exc:
         log(f"Failed to load manifest: {exc}", xbmc.LOGERROR)
-        xbmcgui.Dialog().ok(ADDON_NAME, "Failed to load build manifest.", str(exc))
+        xbmcgui.Dialog().ok(ADDON_NAME, f"Failed to load build manifest.\n{exc}")
         xbmcplugin.endOfDirectory(HANDLE, succeeded=False)
         return
 
@@ -198,16 +198,12 @@ def install_build(url: str, checksum: str, name: str) -> None:
         safe_extract_zip(zip_path, install_target)
 
         progress.close()
-        xbmcgui.Dialog().ok(
-            ADDON_NAME,
-            f"{name} downloaded and installed.",
-            "Please restart Kodi if the new files do not appear immediately.",
-        )
+        xbmcgui.Dialog().ok(ADDON_NAME, f"{name} downloaded and installed.\nPlease restart Kodi if the new files do not appear immediately.")
         xbmc.executebuiltin("Container.Refresh")
     except Exception as exc:
         progress.close()
         log(f"Install failed: {exc}", xbmc.LOGERROR)
-        xbmcgui.Dialog().ok(ADDON_NAME, "Installation failed.", str(exc))
+        xbmcgui.Dialog().ok(ADDON_NAME, f"Installation failed.\n{exc}")
         xbmcplugin.endOfDirectory(HANDLE, succeeded=False)
     finally:
         try:
