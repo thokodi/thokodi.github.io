@@ -104,6 +104,28 @@ class ZipRootTests(unittest.TestCase):
                 self.plugin.safe_extract_zip(archive_path, destination)
             self.assertFalse((destination / "addons").exists())
 
+    def test_rejects_multiple_kodi_roots(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            archive_path = Path(temporary_directory) / "build.zip"
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr("First/.kodi/addons/plugin/addon.xml", "content")
+                archive.writestr("Second/.kodi/userdata/guisettings.xml", "content")
+
+            with self.assertRaisesRegex(ValueError, "Multiple Kodi home roots"):
+                self.plugin.detect_wrapper_folder(archive_path)
+
+    def test_dot_kodi_without_build_folders_uses_wrapper_detection(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            archive_path = Path(temporary_directory) / "build.zip"
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr("Build/.kodi/custom/", "")
+                archive.writestr("Build/readme.txt", "content")
+
+            self.assertEqual(
+                self.plugin.detect_wrapper_folder(archive_path),
+                "Build",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

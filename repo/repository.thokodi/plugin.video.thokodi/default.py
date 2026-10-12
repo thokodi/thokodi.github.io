@@ -158,6 +158,23 @@ def _normalized_names(archive) -> list:
     return names
 
 
+def _find_kodi_root(names) -> str:
+    roots = set()
+    for name in names:
+        parts = name.rstrip("/").split("/")
+        for index, part in enumerate(parts):
+            if (
+                part == ".kodi"
+                and index + 1 < len(parts)
+                and parts[index + 1] in BUILD_FOLDERS
+            ):
+                roots.add("/".join(parts[:index + 1]))
+
+    if len(roots) > 1:
+        raise ValueError("Multiple Kodi home roots found in build archive")
+    return next(iter(roots)) if roots else ""
+
+
 def detect_wrapper_folder(zip_path: Path) -> str:
     """Return the Kodi home or wrapper path, or "" if the archive is rooted directly."""
     import zipfile
@@ -165,15 +182,9 @@ def detect_wrapper_folder(zip_path: Path) -> str:
     with zipfile.ZipFile(zip_path, "r") as archive:
         names = _normalized_names(archive)
 
-    kodi_roots = set()
-    for name in names:
-        parts = name.rstrip("/").split("/")
-        for index, part in enumerate(parts):
-            if part == ".kodi" and index + 1 < len(parts) and parts[index + 1] in BUILD_FOLDERS:
-                kodi_roots.add("/".join(parts[:index + 1]))
-
-    if kodi_roots:
-        return sorted(kodi_roots, key=lambda root: (len(root), root))[0]
+    kodi_root = _find_kodi_root(names)
+    if kodi_root:
+        return kodi_root
 
     tops = {name.split("/", 1)[0] for name in names}
     if len(tops) != 1:
