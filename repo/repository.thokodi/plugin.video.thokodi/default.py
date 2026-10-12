@@ -176,6 +176,26 @@ def _find_kodi_root(names) -> str:
     return next(iter(roots)) if roots else ""
 
 
+def _relative_archive_path(name, wrapper_parts, is_directory):
+    if not wrapper_parts:
+        return name
+
+    normalized_name = name.rstrip("/")
+    name_parts = normalized_name.split("/") if normalized_name else []
+    wrapper = "/".join(wrapper_parts)
+    if normalized_name == wrapper:
+        return None
+    if (
+        is_directory
+        and len(name_parts) < len(wrapper_parts)
+        and wrapper_parts[:len(name_parts)] == name_parts
+    ):
+        return None
+    if name_parts[:len(wrapper_parts)] != wrapper_parts:
+        raise ValueError(f"Unexpected zip entry outside wrapper folder: {name}")
+    return "/".join(name_parts[len(wrapper_parts):])
+
+
 def detect_wrapper_folder(zip_path: Path) -> str:
     """Return the Kodi home or wrapper path, or "" if the archive is rooted directly."""
     import zipfile
@@ -210,23 +230,13 @@ def safe_extract_zip(zip_path: Path, destination: Path, progress=None, name: str
 
     with zipfile.ZipFile(zip_path, "r") as archive:
         plan = []
+        wrapper_parts = wrapper.split("/") if wrapper else []
         for member in archive.infolist():
             name = member.filename.replace("\\", "/").lstrip("/")
-            if wrapper:
-                normalized_name = name.rstrip("/")
-                name_parts = normalized_name.split("/") if normalized_name else []
-                wrapper_parts = wrapper.split("/")
-                if normalized_name == wrapper:
-                    continue
-                if (
-                    member.is_dir()
-                    and len(name_parts) < len(wrapper_parts)
-                    and wrapper_parts[:len(name_parts)] == name_parts
-                ):
-                    continue
-                if name_parts[:len(wrapper_parts)] != wrapper_parts:
-                    raise ValueError(f"Unexpected zip entry outside wrapper folder: {member.filename}")
-                name = "/".join(name_parts[len(wrapper_parts):])
+            relative_name = _relative_archive_path(name, wrapper_parts, member.is_dir())
+            if relative_name is None:
+                continue
+            name = relative_name
             if not name:
                 continue
             target = (destination / name).resolve()
