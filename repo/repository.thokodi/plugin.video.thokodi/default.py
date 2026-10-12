@@ -200,7 +200,7 @@ def install_build(url: str, checksum: str, name: str) -> None:
         progress.update(0, f"Installing {name}...")
 
         install_target = Path(xbmcvfs.translatePath("special://home"))
-safe_extract_zip(zip_path, install_target)
+        safe_extract_zip(zip_path, install_target)
 
         progress.close()
         xbmcgui.Dialog().ok(ADDON_NAME, f"{name} downloaded and installed.\nPlease restart Kodi if the new files do not appear immediately.")
