@@ -158,12 +158,57 @@ def _normalized_names(archive) -> list:
     return names
 
 
+def _find_kodi_root(names: list) -> str:
+    """Find a Kodi home rooted at .kodi; reject archives with multiple such roots."""
+    roots = set()
+    for name in names:
+        parts = name.rstrip("/").split("/")
+        for index, part in enumerate(parts):
+            if (
+                part == ".kodi"
+                and index + 1 < len(parts)
+                and parts[index + 1] in BUILD_FOLDERS
+            ):
+                roots.add("/".join(parts[:index + 1]))
+
+    if len(roots) > 1:
+        raise ValueError("Multiple Kodi home roots found in build archive")
+    return next(iter(roots)) if roots else ""
+
+
+def _relative_archive_path(name: str, wrapper_parts: list, is_directory: bool) -> Optional[str]:
+    """Return a member's path relative to its wrapper; skip wrapper ancestors and reject unsafe paths."""
+    normalized_name = name.rstrip("/")
+    name_parts = normalized_name.split("/") if normalized_name else []
+    if ".." in name_parts:
+        raise ValueError(f"Blocked unsafe zip entry: {name}")
+    if not wrapper_parts:
+        return name
+
+    wrapper = "/".join(wrapper_parts)
+    if normalized_name == wrapper:
+        return None
+    if (
+        is_directory
+        and len(name_parts) < len(wrapper_parts)
+        and wrapper_parts[:len(name_parts)] == name_parts
+    ):
+        return None
+    if name_parts[:len(wrapper_parts)] != wrapper_parts:
+        raise ValueError(f"Unexpected zip entry outside wrapper folder: {name}")
+    return "/".join(name_parts[len(wrapper_parts):])
+
+
 def detect_wrapper_folder(zip_path: Path) -> str:
-    """Return the single top-level wrapper folder name, or "" if the archive is rooted directly."""
+    """Return the Kodi home or wrapper path, or "" if the archive is rooted directly."""
     import zipfile
 
     with zipfile.ZipFile(zip_path, "r") as archive:
         names = _normalized_names(archive)
+
+    kodi_root = _find_kodi_root(names)
+    if kodi_root:
+        return kodi_root
 
     tops = {name.split("/", 1)[0] for name in names}
     if len(tops) != 1:
@@ -188,14 +233,13 @@ def safe_extract_zip(zip_path: Path, destination: Path, progress=None, name: str
 
     with zipfile.ZipFile(zip_path, "r") as archive:
         plan = []
+        wrapper_parts = wrapper.split("/") if wrapper else []
         for member in archive.infolist():
             name = member.filename.replace("\\", "/").lstrip("/")
-            if wrapper:
-                if name == wrapper or name == wrapper + "/":
-                    continue
-                if not name.startswith(wrapper + "/"):
-                    raise ValueError(f"Unexpected zip entry outside wrapper folder: {member.filename}")
-                name = name[len(wrapper) + 1:]
+            relative_name = _relative_archive_path(name, wrapper_parts, member.is_dir())
+            if relative_name is None:
+                continue
+            name = relative_name
             if not name:
                 continue
             target = (destination / name).resolve()
