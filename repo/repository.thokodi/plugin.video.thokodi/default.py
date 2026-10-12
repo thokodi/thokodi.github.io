@@ -265,6 +265,18 @@ def safe_extract_zip(zip_path: Path, destination: Path, progress=None, name: str
     log(f"Extracted {count} files to {destination}")
 
 
+def _make_temp_dir() -> Path:
+    # Android/Fire TV often has no usable system temp dir; prefer Kodi's own.
+    for special in ("special://temp/", "special://home/temp/", "special://profile/"):
+        try:
+            base = Path(xbmcvfs.translatePath(special))
+            base.mkdir(parents=True, exist_ok=True)
+            return Path(tempfile.mkdtemp(prefix="thokodi_", dir=str(base)))
+        except Exception as exc:
+            log(f"Temp dir {special} unusable: {exc}", xbmc.LOGWARNING)
+    return Path(tempfile.mkdtemp(prefix="thokodi_"))
+
+
 def install_build(url: str, checksum: str, name: str) -> None:
     if not url:
         xbmcgui.Dialog().ok(ADDON_NAME, "Missing build URL.")
@@ -274,7 +286,7 @@ def install_build(url: str, checksum: str, name: str) -> None:
     progress = xbmcgui.DialogProgress()
     progress.create(ADDON_NAME, f"Downloading {name}...")
 
-    tmp_dir = Path(tempfile.mkdtemp(prefix="thokodi_"))
+    tmp_dir = _make_temp_dir()
     zip_path = tmp_dir / "build.zip"
 
     try:
