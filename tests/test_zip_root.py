@@ -126,6 +126,13 @@ class ZipRootTests(unittest.TestCase):
                 "Build",
             )
 
+    def test_nested_non_home_dot_kodi_uses_inner_kodi_home(self):
+        self.assert_archive_installs_as(
+            [".kodi/custom/.kodi/addons/plugin/addon.xml"],
+            ".kodi/custom/.kodi",
+            "addons/plugin/addon.xml",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
