@@ -177,7 +177,7 @@ def detect_wrapper_folder(zip_path: Path) -> str:
     return top
 
 
-def safe_extract_zip(zip_path: Path, destination: Path) -> None:
+def safe_extract_zip(zip_path: Path, destination: Path, progress=None, name: str = "") -> None:
     import shutil
     import zipfile
 
@@ -204,7 +204,12 @@ def safe_extract_zip(zip_path: Path, destination: Path) -> None:
             plan.append((member, target))
 
         count = 0
-        for member, target in plan:
+        total_items = len(plan) or 1
+        for index, (member, target) in enumerate(plan):
+            if progress is not None:
+                progress.update(min(int(index * 100 / total_items), 100), f"Installing {name}... {index}/{total_items} files")
+                if progress.iscanceled():
+                    raise Exception("Install canceled")
             if member.is_dir():
                 target.mkdir(parents=True, exist_ok=True)
                 continue
@@ -257,7 +262,7 @@ def install_build(url: str, checksum: str, name: str) -> None:
 
         install_target = Path(xbmcvfs.translatePath("special://home"))
         progress.update(0, f"Installing {name} to {install_target}...")
-        safe_extract_zip(zip_path, install_target)
+        safe_extract_zip(zip_path, install_target, progress, name)
 
         progress.close()
         xbmcgui.Dialog().ok(ADDON_NAME, f"{name} installed to:\n{install_target}\nPlease restart Kodi if the new files do not appear immediately.")
