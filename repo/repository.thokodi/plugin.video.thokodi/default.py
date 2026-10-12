@@ -146,16 +146,74 @@ def verify_checksum(local_path: Path, expected: str) -> bool:
     return digest.hexdigest().lower() == expected_hash
 
 
+BUILD_FOLDERS = {"media", "addons", "userdata"}
+
+
+def _normalized_names(archive) -> list:
+    names = []
+    for member in archive.infolist():
+        name = member.filename.replace("\\", "/").lstrip("/")
+        if name:
+            names.append(name)
+    return names
+
+
+def detect_wrapper_folder(zip_path: Path) -> str:
+    """Return the single top-level wrapper folder name, or "" if the archive is rooted directly."""
+    import zipfile
+
+    with zipfile.ZipFile(zip_path, "r") as archive:
+        names = _normalized_names(archive)
+
+    tops = {name.split("/", 1)[0] for name in names}
+    if len(tops) != 1:
+        return ""
+    top = next(iter(tops))
+    if top in BUILD_FOLDERS or top in {".", ".."}:
+        return ""
+    # a lone top-level entry must be a directory (i.e. have children) to be a wrapper
+    if not any(name.startswith(top + "/") and len(name) > len(top) + 1 for name in names):
+        return ""
+    return top
+
+
 def safe_extract_zip(zip_path: Path, destination: Path) -> None:
+    import shutil
     import zipfile
 
     destination = destination.resolve()
+    wrapper = detect_wrapper_folder(zip_path)
+    log(f"Zip layout: {'wrapper folder ' + repr(wrapper) + ' detected (will be stripped)' if wrapper else 'no wrapper folder, top-level folders are at the archive root'}")
+    log(f"Extracting {zip_path.name} to {destination}")
+
     with zipfile.ZipFile(zip_path, "r") as archive:
+        plan = []
         for member in archive.infolist():
-            target = (destination / member.filename).resolve()
-            if not str(target).startswith(str(destination)):
+            name = member.filename.replace("\\", "/").lstrip("/")
+            if wrapper:
+                if name == wrapper or name == wrapper + "/":
+                    continue
+                if not name.startswith(wrapper + "/"):
+                    raise ValueError(f"Unexpected zip entry outside wrapper folder: {member.filename}")
+                name = name[len(wrapper) + 1:]
+            if not name:
+                continue
+            target = (destination / name).resolve()
+            if target != destination and destination not in target.parents:
                 raise ValueError(f"Blocked unsafe zip entry: {member.filename}")
-        archive.extractall(destination)
+            plan.append((member, target))
+
+        count = 0
+        for member, target in plan:
+            if member.is_dir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with archive.open(member, "r") as src, target.open("wb") as dst:
+                shutil.copyfileobj(src, dst)
+            count += 1
+
+    log(f"Extracted {count} files to {destination}")
 
 
 def install_build(url: str, checksum: str, name: str) -> None:
@@ -197,13 +255,12 @@ def install_build(url: str, checksum: str, name: str) -> None:
         if checksum and not verify_checksum(zip_path, checksum):
             raise ValueError("Checksum verification failed")
 
-        progress.update(0, f"Installing {name}...")
-
         install_target = Path(xbmcvfs.translatePath("special://home"))
+        progress.update(0, f"Installing {name} to {install_target}...")
         safe_extract_zip(zip_path, install_target)
 
         progress.close()
-        xbmcgui.Dialog().ok(ADDON_NAME, f"{name} downloaded and installed.\nPlease restart Kodi if the new files do not appear immediately.")
+        xbmcgui.Dialog().ok(ADDON_NAME, f"{name} installed to:\n{install_target}\nPlease restart Kodi if the new files do not appear immediately.")
         xbmc.executebuiltin("Container.Refresh")
     except Exception as exc:
         progress.close()
