@@ -159,11 +159,27 @@ def _normalized_names(archive) -> list:
 
 
 def detect_wrapper_folder(zip_path: Path) -> str:
-    """Return the single top-level wrapper folder name, or "" if the archive is rooted directly."""
+    """Return the Kodi home or wrapper path, or "" if the archive is rooted directly."""
     import zipfile
 
     with zipfile.ZipFile(zip_path, "r") as archive:
         names = _normalized_names(archive)
+
+    kodi_roots = set()
+    for name in names:
+        parts = name.rstrip("/").split("/")
+        for index, part in enumerate(parts):
+            if part == ".kodi" and index + 1 < len(parts) and parts[index + 1] in BUILD_FOLDERS:
+                kodi_roots.add("/".join(parts[:index + 1]))
+
+    for root in kodi_roots:
+        if all(
+            name.startswith(root + "/")
+            or (name.rstrip("/") == root)
+            or (name.endswith("/") and root.startswith(name.rstrip("/") + "/"))
+            for name in names
+        ):
+            return root
 
     tops = {name.split("/", 1)[0] for name in names}
     if len(tops) != 1:
@@ -192,6 +208,8 @@ def safe_extract_zip(zip_path: Path, destination: Path, progress=None, name: str
             name = member.filename.replace("\\", "/").lstrip("/")
             if wrapper:
                 if name == wrapper or name == wrapper + "/":
+                    continue
+                if member.is_dir() and wrapper.startswith(name.rstrip("/") + "/"):
                     continue
                 if not name.startswith(wrapper + "/"):
                     raise ValueError(f"Unexpected zip entry outside wrapper folder: {member.filename}")
