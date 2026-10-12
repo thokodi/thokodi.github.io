@@ -1,3 +1,6 @@
+v1.1.4
+Fix "No usable temporary directory" error on Fire TV/Android by using Kodi temp paths.
+
 v1.1.3
 Install build archives from the nested Kodi home directory.
 
