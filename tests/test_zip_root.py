@@ -155,6 +155,19 @@ class ZipRootTests(unittest.TestCase):
                 self.plugin.safe_extract_zip(archive_path, destination)
             self.assertFalse((temporary_directory / "evil.txt").exists())
 
+    def test_rejects_direct_root_path_traversal(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_directory = Path(temporary_directory)
+            archive_path = temporary_directory / "build.zip"
+            destination = temporary_directory / "install"
+            destination.mkdir()
+            with zipfile.ZipFile(archive_path, "w") as archive:
+                archive.writestr("addons/../../evil.txt", "unexpected")
+
+            with self.assertRaisesRegex(ValueError, "Blocked unsafe zip entry"):
+                self.plugin.safe_extract_zip(archive_path, destination)
+            self.assertFalse((temporary_directory / "evil.txt").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

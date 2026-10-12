@@ -158,7 +158,7 @@ def _normalized_names(archive) -> list:
     return names
 
 
-def _find_kodi_root(names) -> str:
+def _find_kodi_root(names: list) -> str:
     """Find a Kodi home rooted at .kodi; reject archives with multiple such roots."""
     roots = set()
     for name in names:
@@ -176,12 +176,16 @@ def _find_kodi_root(names) -> str:
     return next(iter(roots)) if roots else ""
 
 
-def _relative_archive_path(name, wrapper_parts, is_directory):
+def _relative_archive_path(name: str, wrapper_parts: list, is_directory: bool) -> Optional[str]:
+    """Return a member's path relative to its wrapper; skip wrapper ancestors and reject unsafe paths."""
+    path_parts = name.rstrip("/").split("/") if name.rstrip("/") else []
+    if ".." in path_parts:
+        raise ValueError(f"Blocked unsafe zip entry: {name}")
     if not wrapper_parts:
         return name
 
     normalized_name = name.rstrip("/")
-    name_parts = normalized_name.split("/") if normalized_name else []
+    name_parts = path_parts
     wrapper = "/".join(wrapper_parts)
     if normalized_name == wrapper:
         return None
