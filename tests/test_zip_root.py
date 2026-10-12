@@ -64,6 +64,7 @@ class ZipRootTests(unittest.TestCase):
                 "outer/files/",
                 "outer/files/.kodi/",
                 "outer/files/.kodi/addons/plugin/addon.xml",
+                "/",
             ],
             "outer/files/.kodi",
             "addons/plugin/addon.xml",

@@ -159,6 +159,7 @@ def _normalized_names(archive) -> list:
 
 
 def _find_kodi_root(names) -> str:
+    """Find a Kodi home rooted at .kodi; reject archives with multiple such roots."""
     roots = set()
     for name in names:
         parts = name.rstrip("/").split("/")
@@ -212,13 +213,20 @@ def safe_extract_zip(zip_path: Path, destination: Path, progress=None, name: str
         for member in archive.infolist():
             name = member.filename.replace("\\", "/").lstrip("/")
             if wrapper:
-                if name == wrapper or name == wrapper + "/":
+                normalized_name = name.rstrip("/")
+                name_parts = normalized_name.split("/") if normalized_name else []
+                wrapper_parts = wrapper.split("/")
+                if normalized_name == wrapper:
                     continue
-                if member.is_dir() and wrapper.startswith(name.rstrip("/") + "/"):
+                if (
+                    member.is_dir()
+                    and len(name_parts) < len(wrapper_parts)
+                    and wrapper_parts[:len(name_parts)] == name_parts
+                ):
                     continue
-                if not name.startswith(wrapper + "/"):
+                if name_parts[:len(wrapper_parts)] != wrapper_parts:
                     raise ValueError(f"Unexpected zip entry outside wrapper folder: {member.filename}")
-                name = name[len(wrapper) + 1:]
+                name = "/".join(name_parts[len(wrapper_parts):])
             if not name:
                 continue
             target = (destination / name).resolve()
