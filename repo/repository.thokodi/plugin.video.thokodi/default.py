@@ -7,6 +7,7 @@ import tempfile
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from typing import Optional
 
 import xbmc
 import xbmcaddon
@@ -45,7 +46,7 @@ def open_url(url: str) -> str:
     return data.decode("utf-8", errors="replace") if isinstance(data, bytes) else data
 
 
-def add_item(label: str, action: str, folder: bool = True, art: dict | None = None, info: dict | None = None, **params) -> None:
+def add_item(label: str, action: str, folder: bool = True, art: Optional[dict] = None, info: Optional[dict] = None, **params) -> None:
     item = xbmcgui.ListItem(label=label)
     if art:
         item.setArt(art)
