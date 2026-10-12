@@ -178,14 +178,13 @@ def _find_kodi_root(names: list) -> str:
 
 def _relative_archive_path(name: str, wrapper_parts: list, is_directory: bool) -> Optional[str]:
     """Return a member's path relative to its wrapper; skip wrapper ancestors and reject unsafe paths."""
-    path_parts = name.rstrip("/").split("/") if name.rstrip("/") else []
-    if ".." in path_parts:
+    normalized_name = name.rstrip("/")
+    name_parts = normalized_name.split("/") if normalized_name else []
+    if ".." in name_parts:
         raise ValueError(f"Blocked unsafe zip entry: {name}")
     if not wrapper_parts:
         return name
 
-    normalized_name = name.rstrip("/")
-    name_parts = path_parts
     wrapper = "/".join(wrapper_parts)
     if normalized_name == wrapper:
         return None
