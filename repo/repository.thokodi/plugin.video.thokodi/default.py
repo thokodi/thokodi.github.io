@@ -172,14 +172,8 @@ def detect_wrapper_folder(zip_path: Path) -> str:
             if part == ".kodi" and index + 1 < len(parts) and parts[index + 1] in BUILD_FOLDERS:
                 kodi_roots.add("/".join(parts[:index + 1]))
 
-    for root in kodi_roots:
-        if all(
-            name.startswith(root + "/")
-            or (name.rstrip("/") == root)
-            or (name.endswith("/") and root.startswith(name.rstrip("/") + "/"))
-            for name in names
-        ):
-            return root
+    if kodi_roots:
+        return sorted(kodi_roots, key=lambda root: (len(root), root))[0]
 
     tops = {name.split("/", 1)[0] for name in names}
     if len(tops) != 1:
